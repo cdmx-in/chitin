@@ -9,26 +9,59 @@ permissions:
 
 jobs:
   build:
-    # 22.04 sets the glibc floor at 2.35, so the binary also runs on 24.04.
-    # Building on 24.04 would raise the floor and drop 22.04 hosts.
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 22.04 sets the glibc floor at 2.35, so gnu builds also run on 24.04.
+          # Building on 24.04 would raise the floor and drop 22.04 hosts.
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+          # Native arm runners, so nothing is cross-compiled. wasmtime (pulled
+          # in by yara-x) builds C, and cross toolchains are where that breaks.
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-musl
+
+    runs-on: ${{ matrix.runner }}
+    env:
+      # wasmtime's build script shells out to a C compiler. cc-rs looks for
+      # <target>-gcc, which musl-tools does not provide under that name.
+      CC_x86_64_unknown_linux_musl: musl-gcc
+      CC_aarch64_unknown_linux_musl: musl-gcc
+
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
 
-      - run: cargo test --release
-      - run: cargo build --release
+      - name: Install musl toolchain
+        if: endsWith(matrix.target, '-musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - run: cargo test --release --target ${{ matrix.target }}
+      - run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package
         run: |
+          set -euo pipefail
           V=${GITHUB_REF_NAME#v}
-          strip target/release/chitin
-          tar czf chitin-$V-x86_64-linux-gnu.tar.gz -C target/release chitin
-          sha256sum chitin-$V-x86_64-linux-gnu.tar.gz > SHA256SUMS
+          NAME=chitin-$V-${{ matrix.target }}
+          strip target/${{ matrix.target }}/release/chitin
+          tar czf $NAME.tar.gz -C target/${{ matrix.target }}/release chitin
+          # Per-target sums file: a shared SHA256SUMS would have four jobs
+          # racing to overwrite the same release asset.
+          sha256sum $NAME.tar.gz > $NAME.tar.gz.sha256
 
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             chitin-*.tar.gz
-            SHA256SUMS
+            chitin-*.tar.gz.sha256

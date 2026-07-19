@@ -21,7 +21,24 @@ is not a managed EDR — no telemetry pipeline, no quarantine, no central consol
 
 - Linux kernel 5.0+ (`FAN_OPEN_EXEC_PERM`)
 - `CAP_SYS_ADMIN` (run as root)
-- Rust 1.87+
+- Rust 1.87+ (to build from source)
+
+## Install
+
+Prebuilt binaries are on the [releases page](https://github.com/cdmx-in/chitin/releases)
+for x86_64 and aarch64:
+
+| Build | Runs on |
+|---|---|
+| `*-linux-gnu` | glibc 2.35+ — Ubuntu 22.04, 24.04 |
+| `*-linux-musl` | statically linked, any distro including Ubuntu 20.04 |
+
+Take the musl build if you are unsure — it has no libc dependency at all.
+
+```sh
+tar xzf chitin-<version>-x86_64-unknown-linux-musl.tar.gz
+sudo ./chitin /etc/chitin/rules /
+```
 
 ## Build
 

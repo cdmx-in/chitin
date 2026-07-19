@@ -1,6 +1,6 @@
 [package]
 name = "chitin"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "On-access malware scanning for Linux: fanotify exec interception with YARA-X verdicts"
 repository = "https://github.com/cdmx-in/chitin"
