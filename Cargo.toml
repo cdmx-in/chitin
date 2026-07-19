@@ -1,0 +1,15 @@
+[package]
+name = "chitin"
+version = "0.1.0"
+edition = "2024"
+description = "On-access malware scanning for Linux: fanotify exec interception with YARA-X verdicts"
+repository = "https://github.com/cdmx-in/chitin"
+authors = ["Codemax IT Solutions Pvt. Ltd. <roney.dsilva@cdmx.in>"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[dependencies]
+nix = { version = "0.31.3", features = ["fanotify", "fs"] }
+yara-x = "1.19.0"
