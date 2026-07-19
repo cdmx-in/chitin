@@ -1,0 +1,34 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # 22.04 sets the glibc floor at 2.35, so the binary also runs on 24.04.
+    # Building on 24.04 would raise the floor and drop 22.04 hosts.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo test --release
+      - run: cargo build --release
+
+      - name: Package
+        run: |
+          V=${GITHUB_REF_NAME#v}
+          strip target/release/chitin
+          tar czf chitin-$V-x86_64-linux-gnu.tar.gz -C target/release chitin
+          sha256sum chitin-$V-x86_64-linux-gnu.tar.gz > SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            chitin-*.tar.gz
+            SHA256SUMS
